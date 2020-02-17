@@ -1,14 +1,36 @@
+from console_arg_parser import ConsoleArgParser
 from selenium import webdriver
-from time import sleep
-import os
-import sys
 from pathlib import Path
-import argparse
+from time import sleep
+import sys
+import os
 
 
 class CodeScrapper:
+    """A class used to scrap algorithm's solutions from www.leetcode.com website
+
+    Class gets code from all solved c++ problems and creates folders and files for solutions code.
+
+    Attributes:
+        email (str): an user email used for login to website
+        password (str): an password used for login to website
+        driver_path (str): an absolute path to web driver. Must be chrome driver
+        wait_time (int): an wait time for a web page load
+        problems_folder (str): the name of folder where algorithms will be saved
+        driver (WebDriver): the driver used for interaction with website
+
+    """
 
     def __init__(self, email, password, driver_path, wait_time, output_name):
+        """
+        Arguments:
+            email (str): user email
+            password (str): user password
+            driver_path (str): path to user's driver
+            wait_time (int): wait time for a web page load
+            output_name (str): name of folder where problems will be stored
+
+        """
         self.email = email
         self.password = password
         self.driver_path = driver_path
@@ -17,21 +39,34 @@ class CodeScrapper:
         self.driver = webdriver.Chrome(executable_path=self.driver_path)
 
     def run(self):
+        """Method runs all necessary functions in order to get problems solutions from website"""
+
         self.driver.get('https://leetcode.com/accounts/login')
 
-        self.login()
-        self.go_to_problems()
-        self.create_problems_folder()
+        self._login()
+        self._go_to_problems()
+        self._create_output_folder()
+        self._create_problems_folder()
 
-        problems = self.get_solved_problems_list()
+        problems = self._get_solved_problems_list()
 
         for p in problems:
-            self.create_problem(p)
+            self._create_problem(p)
 
+        self.driver.close()
         print("Success! Solutions scrapped.")
         sys.exit()
 
-    def login(self):
+    @staticmethod
+    def _create_output_folder():
+        """Creates output folder if not exists"""
+
+        if not os.path.exists('output'):
+            os.makedirs('output')
+
+    def _login(self):
+        """Login to www.leetcode.com website"""
+
         self.driver.find_element_by_name('login').send_keys(self.email)
         self.driver.find_element_by_name('password').send_keys(self.password)
         sleep(self.wait_time)
@@ -39,11 +74,15 @@ class CodeScrapper:
         self.driver.find_element_by_xpath("//*[@id='app']/div/div[2]/div/div[2]/div/div/div/button").click()
         sleep(self.wait_time)
 
-    def go_to_problems(self):
+    def _go_to_problems(self):
+        """Changes page to leetcode problems list"""
+
         self.driver.find_element_by_xpath('//*[@id="lc_navbar"]/div/div[2]/ul[1]/li[3]/a').click()
         sleep(self.wait_time)
 
-    def list_all_solved_questions_on_page(self):
+    def _list_all_solved_questions_on_page(self):
+        """Lists all solved questions"""
+
         self.driver.find_element_by_xpath(
             '//*[@id="question-app"]/div/div[2]/div[2]/div[1]/div[2]/div[4]/button/div').click()
         self.driver.find_element_by_xpath(
@@ -51,7 +90,12 @@ class CodeScrapper:
         self.driver.find_element_by_xpath(
             '//*[@id="question-app"]/div/div[2]/div[2]/div[2]/table/tbody[2]/tr/td/span[1]/select/option[4]').click()
 
-    def get_solved_problems_list(self):
+    def _get_solved_problems_list(self):
+        """Scraps problems from page and creates a list of strings from it
+
+        Returns:
+             problems (list): Solved problems list[str]
+        """
         all_problems = self.driver.find_element_by_class_name('reactable-data')
         problems = []
         for p in all_problems.find_elements_by_tag_name('tr'):
@@ -61,7 +105,13 @@ class CodeScrapper:
 
         return problems
 
-    def create_problem(self, p):
+    def _create_problem(self, p):
+        """Opens specific problem page, creates folder solution and copies code to file
+
+        Arguments:
+            p (list): first element of it is the name of problem, second is the link to problem
+
+        """
         self.driver.get(p[1])
         sleep(self.wait_time/2)
         sleep(self.wait_time)
@@ -76,28 +126,34 @@ class CodeScrapper:
         code = self.driver.find_element_by_xpath(
             '//*[@id="app"]/div/div[2]/div[1]/div/div[3]/div/div[1]/div/div[2]/div/div/div[6]/div[1]/div/div/div/'
             'div[5]')
-        ref_code = self.refactor_code(code.text)
-        self.create_single_problem_solution(p, ref_code)
+        ref_code = self._refactor_code(code.text)
+        self._create_single_problem_solution(p, ref_code)
         sleep(self.wait_time / 2)
         self.driver.execute_script("window.history.go(-1)")
 
-    def create_problems_folder(self):
+    def _create_problems_folder(self):
+        """Creates folder for all problems"""
+
         try:
             Path('output/' + self.problems_folder).mkdir(parents=True, exist_ok=False)
             self.problems_folder = 'output/' + self.problems_folder
         except OSError:
             sys.exit("Creation of folder '" + self.problems_folder + "' failed! Aborting..")
 
-    def create_single_problem_solution(self, problem, code):
-        if self.create_solution_folder(problem):
-            if self.create_solution_file():
-                self.write_code_to_file(code, problem)
+    def _create_single_problem_solution(self, problem, code):
+        """Creates solution for single problem"""
+
+        if self._create_solution_folder(problem):
+            if self._create_solution_file():
+                self._write_code_to_file(code, problem)
             else:
                 print('Creation of solution file ' + problem[0] + ' failed! Skipping the problem...')
         else:
             print('Creation of solution file ' + problem[0] + ' failed! Skipping the problem...')
 
-    def create_solution_folder(self, problem):
+    def _create_solution_folder(self, problem):
+        """Creates single problem folder. Name of folder is the name of problem"""
+
         try:
             Path(self.problems_folder + '/' + problem[0]).mkdir(parents=True, exist_ok=False)
         except OSError:
@@ -106,24 +162,42 @@ class CodeScrapper:
         return True
 
     @staticmethod
-    def create_solution_file():
+    def _create_solution_file():
+        """Creates file for single solution"""
+
         try:
             open('solution.cpp', 'w+').close()
         except IOError:
             return False
         return True
 
-    def write_code_to_file(self, code, problem):
+    def _write_code_to_file(self, code, problem):
+        """Writes code scrapped from website to file
+
+        Arguments:
+            code (str): refactored code scrapped from problem website
+            problem (str): name of problem folder
+
+        """
         f = open('solution.cpp', 'w+')
         f.write(code)
         f.close()
         os.rename("solution.cpp", "./" + self.problems_folder + "/" + problem[0] + "/solution.cpp")
 
-    def refactor_code(self, code):
+    def _refactor_code(self, code):
+        """Refactors code scrapped from website
+
+        This operation is done because code is scrapped with line numbers.
+        Function deletes lines containing numbers at the beginning of a line.
+
+        Arguments:
+             code (str): code scrapped from problem website
+
+        """
         fun = ''
         blank_line = 0
         for l in code.splitlines():
-            if not self.represents_int(l):
+            if not self._represents_int(l):
                 if blank_line >= 2:
                     fun += '\n'
                 fun += l + '\n'
@@ -133,7 +207,8 @@ class CodeScrapper:
         return fun
 
     @staticmethod
-    def represents_int(i):
+    def _represents_int(i):
+        """Checks if variable is integer"""
         try:
             int(i)
             return True
@@ -142,12 +217,5 @@ class CodeScrapper:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='CodeScrapper')
-    parser.add_argument('-e', '--email', required=True, help='User email')
-    parser.add_argument('-p', '--password', required=True, help='User password')
-    parser.add_argument('-dr', '--driverpath', required=True,  help='Absolute path to webdriver')
-    parser.add_argument('-t', '--waittime', type=int, default=5, help='Wait time for a website to load. When error'
-                                                                      ' occurs, try add higher wait time (default=5)')
-    parser.add_argument('-o', '--outputname', default='Problems', help='Name of output folder (default=Problems)')
-    args = parser.parse_args()
+    args = ConsoleArgParser.get_arguments()
     CodeScrapper(args.email, args.password, args.driverpath, args.waittime, args.outputname).run()
