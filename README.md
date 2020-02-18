@@ -9,16 +9,24 @@ usage: scrapper.py [-h] -e EMAIL -p PASSWORD -dr DRIVERPATH [-t WAITTIME]
                    [-o OUTPUTNAME]
 CodeScrapper
 
-optional arguments:
-  -h, --help            show this help message and exit
+required arguments:
+  
   -e EMAIL, --email EMAIL
                         User email
+                        
   -p PASSWORD, --password PASSWORD
                         User password
+                        
   -dr DRIVERPATH, --driverpath DRIVERPATH
                         Absolute path to webdriver
+                        
+ optional arguments:
+ 
+  -h, --help            show this help message and exit
+                        
   -t WAITTIME, --waittime WAITTIME
                         Wait time for a website to load. When error occurs,
                         try add higher wait time (default=5)
+                        
   -o OUTPUTNAME, --outputname OUTPUTNAME
                         Name of output folder (default=Problems)
