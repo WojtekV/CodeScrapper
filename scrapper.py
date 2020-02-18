@@ -1,4 +1,4 @@
-from console_arg_parser import ConsoleArgParser
+from arg_parser import ConsoleArgParser
 from selenium import webdriver
 from pathlib import Path
 from time import sleep
